@@ -1,24 +1,19 @@
-// server.js
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import newsRoute from './routes/newsRoute.js';
+import './cronJob.js'; // ✅ this is now an ESM module
 
-const app = express();
 dotenv.config();
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ Import cronJob to start the scheduler
-require('./cronJob'); // <- Add this line
-
-// Root route
 app.get('/', (req, res) => {
   res.send('🚀 National Alert Backend is running!');
 });
 
-// Route setup
-const newsRoute = require('./routes/newsRoute');
 app.use('/api/news', newsRoute);
 
 const PORT = process.env.PORT || 5000;

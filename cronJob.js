@@ -1,17 +1,25 @@
 import cron from 'node-cron';
-import fetch from 'node-fetch';
+import fetch from 'node-fetch'; // ✅ Use node-fetch v3+
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const categories = ['business', 'sports', 'technology', 'entertainment', 'health', 'general'];
+const BASE_URL = "https://nationalalertbackend.onrender.com/api/news";
 
 console.log("🟢 cronJob.js loaded and scheduler setup starting...");
 
-const categories = ['business', 'sports', 'technology', 'entertainment', 'health', 'general'];
-const BASE_URL = "https://nationalalertbackend.onrender.com/api/news"; // ✅ Use deployed backend URL here
-
 cron.schedule('*/1 * * * *', async () => {
   console.log('⏰ Cron job triggered...');
-  
+
   for (const category of categories) {
     try {
       const res = await fetch(`${BASE_URL}/${category}`);
+      const contentType = res.headers.get('content-type');
+
+      if (!res.ok) throw new Error(`Status ${res.status}: ${await res.text()}`);
+      if (!contentType.includes('application/json')) throw new Error('Expected JSON but got HTML');
+
       const data = await res.json();
 
       console.log(`📂 CATEGORY: ${category}`);

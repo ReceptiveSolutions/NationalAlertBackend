@@ -1,9 +1,13 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const CACHE_DIR = path.join(__dirname, '../cache');
-const CACHE_TIME = 15 * 60 * 1000; // 15 minutes
+const CACHE_TIME = 15 * 60 * 1000;
 
 if (!fs.existsSync(CACHE_DIR)) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -18,7 +22,7 @@ const CATEGORIES = {
   health: { q: 'health OR medicine OR fitness', category: 'health' }
 };
 
-const fetchAndCacheNews = async (category) => {
+export const fetchAndCacheNews = async (category) => {
   const cacheFile = path.join(CACHE_DIR, `${category}Cache.json`);
   const params = CATEGORIES[category] || CATEGORIES.business;
 
@@ -60,14 +64,8 @@ const fetchAndCacheNews = async (category) => {
   }
 };
 
-const fetchAndCacheAllNews = async () => {
+export const fetchAndCacheAllNews = async () => {
   for (let category of Object.keys(CATEGORIES)) {
     await fetchAndCacheNews(category);
   }
 };
-
-module.exports = {
-  fetchAndCacheNews,
-  fetchAndCacheAllNews
-};
-
