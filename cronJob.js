@@ -4,8 +4,7 @@ import fetch from 'node-fetch';
 console.log("🟢 cronJob.js loaded and scheduler setup starting...");
 
 const categories = ['business', 'sports', 'technology', 'entertainment', 'health', 'general'];
-const BASE_URL = process.env.BASE_URL || "http://localhost:5000/api/news";
-
+const BASE_URL = "https://nationalalertbackend.onrender.com/api/news"; // ✅ Use deployed backend URL here
 
 cron.schedule('*/1 * * * *', async () => {
   console.log('⏰ Cron job triggered...');
