@@ -1,34 +1,65 @@
+// cronJob.js  (ES modules)
 import cron from 'node-cron';
-import fetch from 'node-fetch'; // ✅ Use node-fetch v3+
-import dotenv from 'dotenv';
-
-dotenv.config();
+import dayjs from 'dayjs';
+import { query } from './utils/db.js';
+import { fetchAndCacheNews } from './utils/newsFetcher.js';
+import { fetchAndStoreRSSNews } from './utils/rssFetcher.js';
 
 const categories = ['business', 'sports', 'technology', 'entertainment', 'health', 'general'];
-const BASE_URL = "https://nationalalertbackend.onrender.com/api/news";
+console.log('🟢 cronJob.js started: fetch + upsert every 7 minutes');
 
-console.log("🟢 cronJob.js loaded and scheduler setup starting...");
-
-cron.schedule('*/1 * * * *', async () => {
-  console.log('⏰ Cron job triggered...');
+cron.schedule('*/7 * * * *', async () => {
+  console.log('⏰ Fetch cycle', new Date().toLocaleTimeString());
 
   for (const category of categories) {
     try {
-      const res = await fetch(`${BASE_URL}/${category}`);
-      const contentType = res.headers.get('content-type');
+      // Fetch API News
+      const { data: apiArticles } = await fetchAndCacheNews(category);
+      await upsertMany(apiArticles, category);
+      console.log(`✅ API: ${category} - ${apiArticles.length} articles processed`);
 
-      if (!res.ok) throw new Error(`Status ${res.status}: ${await res.text()}`);
-      if (!contentType.includes('application/json')) throw new Error('Expected JSON but got HTML');
+      // Fetch RSS News
+      const rssArticles = await fetchAndStoreRSSNews(category);
+      if (rssArticles?.length) {
+        await upsertMany(rssArticles, category);
+        console.log(`✅ RSS: ${category} - ${rssArticles.length} articles processed`);
+      }
 
-      const data = await res.json();
-
-      console.log(`📂 CATEGORY: ${category}`);
-      console.log(`📌 Source: ${data.fromCache ? 'Cached' : 'Fresh'}`);
-      console.log(`📰 Articles Fetched: ${data.data.length}`);
-      console.log('🧪 Sample Title:', data.data[0]?.title);
-      console.log('----------------------------------------');
     } catch (err) {
-      console.error(`❌ Error fetching ${category}:`, err.message);
+      console.error(`❌ Error fetching for ${category}:`, err.message);
     }
   }
 });
+
+async function upsertMany(list, category) {
+  for (const art of list) {
+    try {
+      await query(
+        `INSERT INTO news_articles
+          (title, summary, link, image_url, pub_date, category,
+           source_type, source_name, country, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+         ON CONFLICT (link) DO NOTHING`,
+        [
+          art.title?.trim(),
+          art.description || art.summary || null,
+          art.link || art.url,
+          art.image_url || null,
+          art.pub_date || art.published_at || null,
+          [category],
+          art.article_id ? 'api' : 'rss',
+          art.source_name || 'unknown',
+          Array.isArray(art.country) ? art.country : ['india'],
+        ]
+      );
+    } catch (e) {
+      console.error('❌ UPSERT error:', e.code, e.detail?.slice?.(0, 120) || e.message);
+      console.log({
+        title: art.title,
+        link: art.link,
+        category,
+        country: art.country
+      });
+    }
+  }
+}

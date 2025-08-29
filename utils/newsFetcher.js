@@ -19,7 +19,8 @@ const CATEGORIES = {
   sports: { category: 'sports' },
   entertainment: { category: 'entertainment' },
   technology: { q: 'tech OR gadget OR software OR ai', category: 'technology' },
-  health: { q: 'health OR medicine OR fitness', category: 'health' }
+  health: { q: 'health OR medicine OR fitness', category: 'health' },
+  crime:{q: 'crime', category: 'crime'}
 };
 
 export const fetchAndCacheNews = async (category) => {
